@@ -1,6 +1,13 @@
-import { App, Editor, MarkdownView, Modal, Notice, Plugin, PluginSettingTab, Setting } from 'obsidian';
-
-// Remember to rename these classes and interfaces!
+import { 
+	App, 
+	Editor, 
+	MarkdownView, 
+	Modal, 
+	Notice, 
+	Plugin, 
+	PluginSettingTab, 
+	Setting,
+} from 'obsidian';
 
 interface PasteAsEmbedSettings {
 	mySetting: string;
@@ -14,26 +21,35 @@ export default class PasteAsEmbed extends Plugin {
 	settings: PasteAsEmbedSettings;
 	
 	async pasteFilter(
-		evt: ClipboardEvent, 
+		evt: ClipboardEvent | null, 
 		editor: Editor, 
 		view: MarkdownView,
 	) {
-		// Based on https://github.com/kxxt/obsidian-advanced-paste/blob/cfb04918298f14ffa7f04aefa49beaef9a2e8a76/src/main.ts#L220
-		// I'm not sure what isManuallyTriggered is about; Ctrl+V does appear to paste through !isManuallyTriggered, so...
-		// const isManuallyTriggered = evt == null;  // Not triggered by Ctrl+V 
-		const txt= evt.clipboardData?.getData('text/plain');
+		// The isManuallyTriggered clipboard loading logic is derived from https://github.com/kxxt/obsidian-advanced-paste/blob/cfb04918298f14ffa7f04aefa49beaef9a2e8a76/src/main.ts#L220
+		// I'm not sure what isManuallyTriggered is about; Ctrl+V content does appear to be retrievable through both methods used below 
+		const isManuallyTriggered = evt == null;  // "Not triggered by Ctrl+V"
+	
+		let txt; 
+		if (isManuallyTriggered) {
+			const items = await navigator.clipboard.read();
+			if (items.length == 0 || !items[0].types.includes("text/plain"))
+				return; 
+			const blob = await items[0].getType("text/plain");
+			txt = await blob.text();
+		} else {
+			txt= evt.clipboardData?.getData('text/plain');
+		}
 		
-		// The following also retrieves from clipboard, but results in another paste event for some reason
-		// const items = await navigator.clipboard.read();
-		// const blob = await items[0].getType("text/plain")
-		// const txt = await blob.text();
+		if (txt) {
+			evt?.preventDefault();  // Prevent the usual paste from happening, too
+			evt?.stopPropagation();  
+			
+			this.app.vault.create("test.md", txt)
+			
+			editor.replaceSelection('![[test]]\n');
+		}
 		
-		editor.replaceSelection(txt + '\n');
-		
-		evt?.preventDefault();  // Prevent the usual paste from happening
-		evt?.stopPropagation();  
-		
-		new Notice('Pasted Plotly figure into embed');
+		new Notice('Pasted contents of clipboard into embedded note');
 	}
 
 	async onload() {  // Configure resources needed by the plugin.
@@ -53,7 +69,8 @@ export default class PasteAsEmbed extends Plugin {
 			id: 'paste-as-embed',
 			name: 'Paste to new note and embed at current position.',
 			editorCallback: (editor: Editor, view: MarkdownView) => {
-				editor.replaceSelection('Sample Editor Command' + '\n');
+				// editor.replaceSelection('Sample Editor Command' + '\n');
+				this.pasteFilter(null, editor, view);
 			}
 		});
 
