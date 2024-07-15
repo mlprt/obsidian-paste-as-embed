@@ -8,4 +8,7 @@ export default tseslint.config(
   ...tseslint.configs.recommended,
   ...tseslint.configs.strict,
   ...tseslint.configs.stylistic,
+  {
+    ignores: ["node_modules/", "main.js"]
+  }
 );
