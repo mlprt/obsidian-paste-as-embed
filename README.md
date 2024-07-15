@@ -1,10 +1,16 @@
-# Obsidian Paste-As-Embed
+# Paste as Embed
 
 When pasting text into a note, check the text against regexp patterns. When it matches, create a new note containing the text, and embed that note into the active note.
 
 ## How to use
 
 Define rules in the plugin settings pane, that determine when and how to create and embed a note, depending on the text being pasted. 
+
+### Example usage
+
+Here are the settings I use for [embedding Plotly figures](#motivation) made in Python, using the output from `fig.to_json()`:
+
+![](images/plotly-example.png)
 
 ## How it works
 
@@ -31,19 +37,17 @@ Note the following limitations of this early version of the plugin:
 
 ## Motivation
 
-I like using the [obsidian-plotly](https://github.com/Dmytro-Shulha/obsidian-plotly) plugin to render interactive figures in my notes. The user pastes Plotly JSON inside a code block, which is displayed as the rendered figure.
-However, when editing the note or interacting with the plot, the code block sometimes collapses back into its unrendered form. This sometimes causes the editor to lag to the point of unusability. 
+I like using the [obsidian-plotly](https://github.com/Dmytro-Shulha/obsidian-plotly) plugin to render interactive figures in my notes. The Plotly figure is represented as JSON and placed in a code block, which is replaced with the rendered figure in the editor.
+
+However, when editing the note or interacting with the plot, the code block sometimes collapses back into its unrendered, editable form. This sometimes causes the editor to lag to the point of unusability. 
 
 Thankfully:
+
 - If the code block is placed in a standalone note which is then embedded, it renders well as an embed and does not collapse back into editable JSON.
-- We usually do not need to edit the JSON directly, and if we do, it is probably easier to do so when they are in a separate note and not expanding/collapsing thousands of characters inside an existing view.
-- This allows us to treat Plotly figures like other (e.g. image) attachments.
+- We usually do not need to edit the JSON directly, and if we do, it is probably easier to do so when it's in a separate note and isn't expanding/collapsing thousands of characters inside an existing view.
+- Keeping JSON for a figure in its own note allows us to treat text-based figures like other (e.g. image) attachments.
 
-However, it is effortful to manually create and embed these notes. Acknowledging that similar use cases may benefit from automation, and wanting to try writing an Obsidian plugin for the first time, I wrote this one.
-
-Here are the settings I use for embedding Plotly figures made in Python, using the output from `fig.to_json()`:
-
-![](images/plotly-example.png)
+However, it's effortful to manually create and embed such notes. Acknowledging that similar use cases may benefit from automation, and wanting to try writing an Obsidian plugin for the first time, I therefore wrote this one.
 
 ## Acknowledgments 
 
