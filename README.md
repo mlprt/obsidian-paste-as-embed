@@ -32,14 +32,14 @@ Note the following limitations of this early version of the plugin:
 ## Motivation
 
 I like using the [obsidian-plotly](https://github.com/Dmytro-Shulha/obsidian-plotly) plugin to render interactive figures in my notes. The user pastes Plotly JSON inside a code block, which is displayed as the rendered figure.
-However, when editing the note or interacting with the plot, the code block sometimes collapses back into its unrendered form. This causes the note to lag, to the point of unusability. 
+However, when editing the note or interacting with the plot, the code block sometimes collapses back into its unrendered form. This sometimes causes the editor to lag to the point of unusability. 
 
 Thankfully:
-- If the code block is placed in a standalone note which is then embedded, the embed renders well and does not collapse back into editable JSON.
-- We usually do not need to edit the JSON directly, and when we do, it is probably easier to do so when they are in a separate note and not expanding/collapsing thousands of characters inside an existing view.
+- If the code block is placed in a standalone note which is then embedded, it renders well as an embed and does not collapse back into editable JSON.
+- We usually do not need to edit the JSON directly, and if we do, it is probably easier to do so when they are in a separate note and not expanding/collapsing thousands of characters inside an existing view.
 - This allows us to treat Plotly figures like other (e.g. image) attachments.
 
-However, it is effortful to manually create and embed these notes. Acknowledging that similar use cases may benefit from automation, and wanting to try writing an Obsidian plugin for the first time, I wrote this plugin. 
+However, it is effortful to manually create and embed these notes. Acknowledging that similar use cases may benefit from automation, and wanting to try writing an Obsidian plugin for the first time, I wrote this one.
 
 ## Acknowledgments 
 

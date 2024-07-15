@@ -128,7 +128,7 @@ export default class PasteAsEmbed extends Plugin {
 	async onload() {  // Configure resources needed by the plugin.
 		await this.loadSettings();
 		// This adds a settings tab so the user can configure various aspects of the plugin
-		this.addSettingTab(new SampleSettingTab(this.app, this));
+		this.addSettingTab(new PasteAsEmbedSettingTab(this.app, this));
 		
 		this.adapter = this.app.vault.adapter as FileSystemAdapter;				
 		
@@ -176,7 +176,7 @@ export interface PasteRule {
 }
 
 
-class SampleSettingTab extends PluginSettingTab {
+class PasteAsEmbedSettingTab extends PluginSettingTab {
 	plugin: PasteAsEmbed;
 	rulesEl: HTMLDivElement;
 
