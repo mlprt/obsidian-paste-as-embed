@@ -41,6 +41,8 @@ Thankfully:
 
 However, it is effortful to manually create and embed these notes. Acknowledging that similar use cases may benefit from automation, and wanting to try writing an Obsidian plugin for the first time, I wrote this one.
 
+![](images/plotly-example.png)
+
 ## Acknowledgments 
 
 Parts of this plugin are directly derived (see source comments) from parts of the following plugins:
@@ -54,7 +56,7 @@ Additionally, I took inspiration from [obsidian-custom-attachment-location](http
 
 - [ ] Allow individual rules to be toggled on and off
 - [ ] Control precedence/order of rules
-- [ ] Allow rules to be either 1) regexp-based, or 2) associated with hotkeys
+- [ ] Allow rules to be either 1) regexp-based, or 2) associated with keyboard shortcuts
 - [ ] Toggle CSS styling (e.g. clean-embeds)
 
 ### Mobile support

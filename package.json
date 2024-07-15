@@ -1,6 +1,6 @@
 {
 	"name": "obsidian-paste-as-embed",
-	"version": "0.1.1",
+	"version": "0.1.2",
 	"description": "Paste text into a separate note, and embed the note.",
 	"main": "main.js",
 	"scripts": {

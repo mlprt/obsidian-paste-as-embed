@@ -1,7 +1,7 @@
 {
-	"id": "obsidian-paste-as-embed",
+	"id": "paste-as-embed",
 	"name": "Paste as Embed",
-	"version": "0.1.1",
+	"version": "0.1.2",
 	"minAppVersion": "0.15.0",
 	"description": "Paste text into a separate note, and embed the note.",
 	"author": "Matt Laporte",
