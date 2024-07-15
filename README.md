@@ -41,6 +41,8 @@ Thankfully:
 
 However, it is effortful to manually create and embed these notes. Acknowledging that similar use cases may benefit from automation, and wanting to try writing an Obsidian plugin for the first time, I wrote this one.
 
+Here are the settings I use for embedding Plotly figures made in Python, using the output from `fig.to_json()`:
+
 ![](images/plotly-example.png)
 
 ## Acknowledgments 
