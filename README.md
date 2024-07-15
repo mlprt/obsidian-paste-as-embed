@@ -1,96 +1,58 @@
-# Obsidian Sample Plugin
+# Obsidian Paste-As-Embed
 
-This is a sample plugin for Obsidian (https://obsidian.md).
-
-This project uses Typescript to provide type checking and documentation.
-The repo depends on the latest plugin API (obsidian.d.ts) in Typescript Definition format, which contains TSDoc comments describing what it does.
-
-**Note:** The Obsidian API is still in early alpha and is subject to change at any time!
-
-This sample plugin demonstrates some of the basic functionality the plugin API can do.
-- Adds a ribbon icon, which shows a Notice when clicked.
-- Adds a command "Open Sample Modal" which opens a Modal.
-- Adds a plugin setting tab to the settings page.
-- Registers a global click event and output 'click' to the console.
-- Registers a global interval which logs 'setInterval' to the console.
-
-## First time developing plugins?
-
-Quick starting guide for new plugin devs:
-
-- Check if [someone already developed a plugin for what you want](https://obsidian.md/plugins)! There might be an existing plugin similar enough that you can partner up with.
-- Make a copy of this repo as a template with the "Use this template" button (login to GitHub if you don't see it).
-- Clone your repo to a local development folder. For convenience, you can place this folder in your `.obsidian/plugins/your-plugin-name` folder.
-- Install NodeJS, then run `npm i` in the command line under your repo folder.
-- Run `npm run dev` to compile your plugin from `main.ts` to `main.js`.
-- Make changes to `main.ts` (or create new `.ts` files). Those changes should be automatically compiled into `main.js`.
-- Reload Obsidian to load the new version of your plugin.
-- Enable plugin in settings window.
-- For updates to the Obsidian API run `npm update` in the command line under your repo folder.
-
-## Releasing new releases
-
-- Update your `manifest.json` with your new version number, such as `1.0.1`, and the minimum Obsidian version required for your latest release.
-- Update your `versions.json` file with `"new-plugin-version": "minimum-obsidian-version"` so older versions of Obsidian can download an older version of your plugin that's compatible.
-- Create new GitHub release using your new version number as the "Tag version". Use the exact version number, don't include a prefix `v`. See here for an example: https://github.com/obsidianmd/obsidian-sample-plugin/releases
-- Upload the files `manifest.json`, `main.js`, `styles.css` as binary attachments. Note: The manifest.json file must be in two places, first the root path of your repository and also in the release.
-- Publish the release.
-
-> You can simplify the version bump process by running `npm version patch`, `npm version minor` or `npm version major` after updating `minAppVersion` manually in `manifest.json`.
-> The command will bump version in `manifest.json` and `package.json`, and add the entry for the new version to `versions.json`
-
-## Adding your plugin to the community plugin list
-
-- Check https://github.com/obsidianmd/obsidian-releases/blob/master/plugin-review.md
-- Publish an initial version.
-- Make sure you have a `README.md` file in the root of your repo.
-- Make a pull request at https://github.com/obsidianmd/obsidian-releases to add your plugin.
+When pasting text into a note, check the text against regexp patterns. When it matches, create a new note containing the text, and embed that note into the current note.
 
 ## How to use
 
-- Clone this repo.
-- Make sure your NodeJS is at least v16 (`node --version`).
-- `npm i` or `yarn` to install dependencies.
-- `npm run dev` to start compilation in watch mode.
+Define rules in the plugin settings pane, that determine when and how to create and embed a note, depending on the text being pasted. 
 
-## Manually installing the plugin
+## How it works
 
-- Copy over `main.js`, `styles.css`, `manifest.json` to your vault `VaultFolder/.obsidian/plugins/your-plugin-id/`.
+When text is pasted from the clipboard, it is checked against a list of user-defined rules:
 
-## Improve code quality with eslint (optional)
-- [ESLint](https://eslint.org/) is a tool that analyzes your code to quickly find problems. You can run ESLint against your plugin to find common bugs and ways to improve your code. 
-- To use eslint with this project, make sure to install eslint from terminal:
-  - `npm install -g eslint`
-- To use eslint to analyze this project use this command:
-  - `eslint main.ts`
-  - eslint will then create a report with suggestions for code improvement by file and line number.
-- If your source code is in a folder, such as `src`, you can use eslint with this command to analyze all files in that folder:
-  - `eslint .\src\`
+- Each rule is associated with a regular expression string. 
+- The plugin engages the first rule whose regexp tests `true` against the pasted text. 
 
-## Funding URL
+When a rule is engaged:
 
-You can include funding URLs where people who use your plugin can financially support it.
+- the pasted text is inserted into a template, if one is supplied for the rule;
+- a new note is created, with its name and directory determined according to the settings defined for the rule;
+- the contents of the new note are the (potentially templated) pasted text;
+- the new note is embedded at the current position in the currently open note.
 
-The simple way is to set the `fundingUrl` field to your link in your `manifest.json` file:
+If no rule is engaged, pasting proceeds as it normally would.
 
-```json
-{
-    "fundingUrl": "https://buymeacoffee.com"
-}
-```
+Note the following limitations of this early version of the plugin:
 
-If you have multiple URLs, you can also do:
+- The first matching rule in the list is the only one executed.
+- An empty regexp string always matches; so a rule with an empty regexp string will always be executed, if no preceding rules matched the pasted text. 
+- No rules that follow a rule with an empty regexp string will ever be executed.
+- If a rule is renamed, it is moved to the end of the list and becomes last in precedence.
 
-```json
-{
-    "fundingUrl": {
-        "Buy Me a Coffee": "https://buymeacoffee.com",
-        "GitHub Sponsor": "https://github.com/sponsors",
-        "Patreon": "https://www.patreon.com/"
-    }
-}
-```
+## Motivation
 
-## API Documentation
+I like using the [obsidian-plotly](https://github.com/Dmytro-Shulha/obsidian-plotly) plugin to render interactive figures in my notes. The user pastes Plotly JSON inside a code block, which is displayed as the rendered figure.
+However, when editing the note or interacting with the plot, the code block sometimes collapses back into its unrendered form. This causes the note to lag, to the point of unusability. 
 
-See https://github.com/obsidianmd/obsidian-api
+Thankfully:
+- If the code block is placed in a standalone note which is then embedded, the embed renders well and does not collapse back into editable JSON.
+- We usually do not need to edit the JSON directly, and when we do, it is probably easier to do so when they are in a separate note and not expanding/collapsing thousands of characters inside an existing view.
+- This allows us to treat Plotly figures like other (e.g. image) attachments.
+
+However, it is effortful to manually create and embed these notes. Acknowledging that similar use cases may benefit from automation, and wanting to try writing an Obsidian plugin for the first time, I wrote this plugin. 
+
+## Acknowledgments 
+
+Parts of this plugin are directly derived (see source comments) from parts of the following plugins:
+
+- [obsidian-admonition](https://github.com/javalent/admonitions) 
+- [advanced-paste](https://github.com/kxxt/obsidian-advanced-paste) 
+
+Additionally, I took inspiration from [obsidian-custom-attachment-location](https://github.com/RainCat1998/obsidian-custom-attachment-location) concerning the customization of note and directory naming.
+
+## TODO
+
+- [ ] Allow individual rules to be toggled on and off
+- [ ] Control precedence/order of rules
+- [ ] Allow rules to be either 1) regexp-based, or 2) associated with hotkeys
+- [ ] Toggle CSS styling (e.g. clean-embeds)

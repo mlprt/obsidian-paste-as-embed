@@ -1,11 +1,10 @@
 {
 	"id": "obsidian-paste-as-embed",
 	"name": "Paste as Embed",
-	"version": "0.0.1",
-	"minAppVersion": "1.6.5",
-	"description": "Paste into a separate note, and embed the note.",
+	"version": "0.1.0",
+	"minAppVersion": "0.15.0",
+	"description": "Paste text into a separate note, and embed the note.",
 	"author": "Matt Laporte",
-	"authorUrl": "https://obsidian.md",
-	"fundingUrl": "https://obsidian.md/pricing",
+	"authorUrl": "https://lprt.ca",
 	"isDesktopOnly": false
 }
