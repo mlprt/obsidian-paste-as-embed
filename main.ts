@@ -1,27 +1,38 @@
 import { 
 	App, 
 	ButtonComponent,
-	Component,
+	// Component,
 	Editor, 
+	// FileManager,
+	FileSystemAdapter,
 	MarkdownView, 
+	moment,
 	Modal, 
 	Notice, 
 	Plugin, 
 	PluginSettingTab, 
+	sanitizeHTMLToDom,
 	Setting,
-	setIcon,
+	// setIcon,
+	TFile,
 } from 'obsidian';
 
+const path = require('path'); // eslint-disable-line 
+
 interface PasteAsEmbedSettings {
-	mySetting: string;
+	// TODO: replace with Map https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Map
+	userRules: Record<string, PasteRule>;
+	datetimeFormat: string; 
 }
 
 const DEFAULT_SETTINGS: PasteAsEmbedSettings = {
-	mySetting: 'default'
+	userRules: {},
+	datetimeFormat: "YYYYMMDD-HHmmss",
 }
 
 export default class PasteAsEmbed extends Plugin {
 	settings: PasteAsEmbedSettings;
+	adapter: FileSystemAdapter;
 	
 	async pasteFilter(
 		evt: ClipboardEvent | null, 
@@ -44,20 +55,74 @@ export default class PasteAsEmbed extends Plugin {
 		}
 		
 		if (txt) {
+			
+			if (!view.file) {
+				new Notice("No file open to paste into.");
+				return;
+			}
+			
+			const matchingRule = this.getMatchingRule(txt);
+			
+			if (!matchingRule) {
+				return;
+			}
+			
 			evt?.preventDefault();  // Prevent the usual paste from happening, too
 			evt?.stopPropagation();  
 			
-			this.app.vault.create("test.md", txt)
+			if (matchingRule.template) {
+				txt = matchingRule.template.replace("${content}", txt)
+			}
 			
-			editor.replaceSelection('![[test]]\n');
+			const embedNoteName = this.getEmbedNoteName(matchingRule, view.file);
+			const embedDirectory = this.getEmbedDirectory(matchingRule, view.file)
+			const embedFilePath = path.join(embedDirectory, embedNoteName + ".md");
+			
+			if (!await this.adapter.exists(embedDirectory)) 
+				await this.adapter.mkdir(embedDirectory);
+			
+			this.app.vault.create(embedFilePath, txt)
+			
+			editor.replaceSelection(`![[${embedNoteName}]]\n`);
+			
+			new Notice('Pasted contents of clipboard into embedded note');
+			
+		}
+	}
+	
+	getMatchingRule(txt: string) {
+		for (const rule of Object.values(this.settings.userRules)) {
+			const regexp = new RegExp(rule.pattern);
+			if (regexp.test(txt)) {
+				return rule;
+			}
+		}
+		return null;
+	}
+	
+	getEmbedNoteName(rule: PasteRule, file: TFile) {
+		const datetime = moment().format(this.settings.datetimeFormat);	
+		
+		const name = rule.filenameFmt
+			.replace("${notename}", file.basename)
+			.replace("${date}", datetime);
+		
+		return name;
+	}
+	
+	getEmbedDirectory(rule: PasteRule, file: TFile) {
+		const directory = path.dirname(file.path);
+		
+		const ruleDirectory = rule.directory.replace('${notename}', file.basename);
+		
+		let embedDirectory;
+		if (rule.directory.startsWith('./')) {
+			embedDirectory = path.join(directory, ruleDirectory);
+		} else {
+			embedDirectory = ruleDirectory;
 		}
 		
-		// TODO: Redirect any kind of paste (e.g. images) to an embedded file
-		// Not sure if that's possible without opening an editor/view (?) to the new note
-	    // and creating a new event wrt the new editor, 
-		// but maybe we can leave it unfocused and close it after. 
-		
-		new Notice('Pasted contents of clipboard into embedded note');
+		return embedDirectory;
 	}
 
 	async onload() {  // Configure resources needed by the plugin.
@@ -65,7 +130,7 @@ export default class PasteAsEmbed extends Plugin {
 		// This adds a settings tab so the user can configure various aspects of the plugin
 		this.addSettingTab(new SampleSettingTab(this.app, this));
 		
-		// console.log('loading plugin');
+		this.adapter = this.app.vault.adapter as FileSystemAdapter;				
 		
 		this.registerEvent(
 			this.app.workspace.on(
@@ -97,6 +162,7 @@ export default class PasteAsEmbed extends Plugin {
 	async saveSettings() {
 		await this.saveData(this.settings);
 	}
+	
 }
 
 
@@ -104,6 +170,7 @@ export interface PasteRule {
 	name: string;  // Identifies the rule 
 	desc?: string;  // Describes the rule
 	directory: string;  // Where to create the new file 
+	filenameFmt: string;  // How to name the embedded notes. 
 	pattern: string;  // Clipboard text pattern that triggers the rule 
 	template?: string;  // Insert the pasted text into this template, when writing to new file (e.g. code fence)
 }
@@ -111,7 +178,6 @@ export interface PasteRule {
 
 class SampleSettingTab extends PluginSettingTab {
 	plugin: PasteAsEmbed;
-	userRules: Record<string, PasteRule>;;
 	rulesEl: HTMLDivElement;
 
 	constructor(app: App, plugin: PasteAsEmbed) {
@@ -123,18 +189,32 @@ class SampleSettingTab extends PluginSettingTab {
 		const {containerEl} = this;
 
 		containerEl.empty();
+		
+		const datetimeSettingDesc: DocumentFragment = sanitizeHTMLToDom(
+			'For formatting embed note names when the ${date} variable is used. <br>'
+			+ 'See the <a href="https://momentjs.com/docs/#/displaying/">Moment.js docs</a> for format options.'
+		)
+		
+		new Setting(containerEl)
+			.setName("Datetime format")
+			.setDesc(datetimeSettingDesc)
+			.addText(text => text
+				.setPlaceholder('')
+				.setValue(this.plugin.settings.datetimeFormat ?? "")
+				.onChange(async (value) => {
+					this.plugin.settings.datetimeFormat = value;
+					this.plugin.saveSettings();
+				})
+			);
 				
 		new Setting(containerEl)
-			.setName("Add New")
-			.setDesc(
-				"Add new rule."
-			)
+			.setName(sanitizeHTMLToDom("Add new rule"))
 			.addButton((button: ButtonComponent): ButtonComponent => {
-				let b = button
+				const b = button
 					.setTooltip("Add rule")
-					.setButtonText("+")
+					.setIcon('plus')
 					.onClick(async () => {
-						let modal = new SettingsModal(this.plugin);
+						const modal = new SettingsModal(this.plugin);
 
 						modal.onClose = async () => {
 							if (modal.saved) {
@@ -144,8 +224,9 @@ class SampleSettingTab extends PluginSettingTab {
 									pattern: modal.pattern, 
 									template: modal.template,
 									desc: modal.desc,
+									filenameFmt: modal.filenameFmt,
 								};
-								this.userRules[rule.name] = rule;
+								this.plugin.settings.userRules[rule.name] = rule;
 								this.plugin.saveSettings();
 								this.display();
 							}
@@ -164,50 +245,108 @@ class SampleSettingTab extends PluginSettingTab {
 	buildRules() { // https://github.com/javalent/admonitions/blob/f19389940b0148b677e106f503980cbb9f767f63/src/settings.ts#L907
 		this.rulesEl.empty();
 		
-		for (const rule of Object.values(this.userRules)) {
-			let setting = new Setting(this.rulesEl) 
-				.setName(rule.name)
-				.addButton((button: ButtonComponent): ButtonComponent => {
-					let b = button
-						.setTooltip("Edit rule")
-						.setIcon('pencil')
-						// .setButtonText("+")
-						.onClick(async () => {
-							let modal = new SettingsModal(this.plugin, rule);
-	
-							modal.onClose = async () => {
-								if (modal.saved) {
-									const modalRule = {
-										name: modal.name, 
-										directory: modal.directory, 
-										pattern: modal.pattern, 
-										template: modal.template,
-										desc: modal.desc,
-									};
-									
-									if (modalRule.name != rule.name) {
-										// Treat this as a simple renaming
-										delete this.userRules[rule.name];
+		if (this.plugin.settings.userRules) {
+			for (const rule of Object.values(this.plugin.settings.userRules)) {
+				const setting = new Setting(this.rulesEl) 
+					.setName(rule.name)
+					.addButton((button: ButtonComponent): ButtonComponent => {
+						const b = button
+							.setTooltip("Edit rule")
+							.setIcon('pencil')
+							// .setButtonText("+")
+							.onClick(async () => {
+								const modal = new SettingsModal(this.plugin, rule);
+		
+								modal.onClose = async () => {
+									if (modal.saved) {
+										const modalRule = {
+											name: modal.name, 
+											directory: modal.directory, 
+											pattern: modal.pattern, 
+											template: modal.template,
+											desc: modal.desc,
+											filenameFmt: modal.filenameFmt,
+										};
+										
+										if (modalRule.name != rule.name) {
+											// Treat this as a simple renaming
+											delete this.plugin.settings.userRules[rule.name];
+										}
+										
+										this.plugin.settings.userRules[modalRule.name] = modalRule;
+										this.plugin.saveSettings();
+										this.display();
 									}
-									
-									this.userRules[modalRule.name] = modalRule;
+								};
+		
+								modal.open();
+							});
+							
+						return b;
+					});
+					
+				setting.addButton((button: ButtonComponent): ButtonComponent => {
+					const b = button
+						.setTooltip("Remove rule")
+						.setIcon('cross')
+						.onClick(async () => {
+							new ConfirmDeleteModal(this.plugin, (result) => {
+								if (result) {
+									delete this.plugin.settings.userRules[rule.name];
 									this.plugin.saveSettings();
 									this.display();
 								}
-							};
-	
-							modal.open();
+							}).open();
+							
 						});
-						
+							
 					return b;
 				});
-				
-			if (rule.desc) {
-				setting.setDesc(rule.desc)
+					
+				if (rule.desc) {
+					setting.setDesc(rule.desc)
+				}
 			}
 		}
 	}
 }
+
+
+class ConfirmDeleteModal extends Modal {
+	result = false;
+	onSubmit: (result: boolean) => void; 
+	
+	constructor(plugin: PasteAsEmbed, onSubmit: (result: boolean) => void) {
+		super(plugin.app);
+		this.onSubmit = onSubmit;
+	}
+	
+	onOpen() {
+		this.titleEl.setText("Confirm rule deletion");
+		const { contentEl } = this; 
+		contentEl.setText("Are you sure you want to delete this rule?");
+		
+		const setting = new Setting(contentEl) 
+			.addButton((btn) => 
+				btn 
+					.setButtonText("Delete")
+					.onClick(() => {
+						this.close();
+						this.onSubmit(true);
+					})
+			);
+		
+		setting.addButton((btn) => 
+			btn 
+				.setButtonText("Cancel")
+				.onClick(() => {
+					this.close(); 
+					this.onSubmit(false);	
+				})	
+		)
+	}
+}
+
 
 class SettingsModal extends Modal {
 	name: string;  // Identifies the rule 
@@ -215,8 +354,9 @@ class SettingsModal extends Modal {
 	pattern: string;  // Clipboard text pattern that triggers the rule 
 	template?: string;  // Insert the pasted text into this template, when writing to new file (e.g. code fence)
 	desc?: string;
-	editing: boolean = false;
-	saved: boolean = false;  // Whether the user clicked "Save" 
+	filenameFmt: string;
+	editing = false;
+	saved = false;  // Whether the user clicked "Save" 
 	
 	constructor(plugin: PasteAsEmbed, rule?: PasteRule) {
 		super(plugin.app);
@@ -227,6 +367,7 @@ class SettingsModal extends Modal {
 			this.pattern = rule.pattern;
 			this.template = rule.template;
 			this.desc = rule.desc;
+			this.filenameFmt = rule.filenameFmt;
 		}
 	}
 	
@@ -234,12 +375,12 @@ class SettingsModal extends Modal {
 		// this.containerEl.addClass("rule-settings-modal");
 		this.titleEl.setText(`${this.editing ? "Edit" : "Add"} rule`);
 		
-		let { contentEl } = this;
+		const { contentEl } = this;
 		
 		contentEl.empty();
 		
 		const settingDiv = contentEl.createDiv();
-		const title = this.name ?? "...";
+		// const title = this.name ?? "...";
 		
 		new Setting(settingDiv)
 			.setName('Rule name')
@@ -263,8 +404,8 @@ class SettingsModal extends Modal {
 			);
 				
 		new Setting(settingDiv)
-			.setName('Pattern')
-			.setDesc('Regex pattern that triggers the rule on pasted clipboard text')
+			.setName('Pattern (optional)')
+			.setDesc('Regex pattern that triggers the rule on pasted clipboard text. Leave empty to trigger on all pasted text.')
 			.addText(text => text
 				.setPlaceholder('')
 				.setValue(this.pattern ?? "")
@@ -274,9 +415,8 @@ class SettingsModal extends Modal {
 			);
 			
 		new Setting(settingDiv)
-			.setName('Directory')
-			// TODO: relative or absolute 
-			.setDesc('Where to save the embedded notes')
+			.setName('Embedded note directory')
+			.setDesc('Where to save the embedded notes. Start with "./" for path relative to the directory of the current note. Use ${notename} for the name of the current note.')
 			.addText(text => text
 				.setPlaceholder('')
 				.setValue(this.directory ?? "")
@@ -284,20 +424,33 @@ class SettingsModal extends Modal {
 					this.directory = value;
 				})
 			);
-			
+
 		new Setting(settingDiv)
-			.setName('Template (optional)')
-			.setDesc('Pasted text is inserted into this, in the embedded note')
+			.setName('Name format for embedded note')
+			.setDesc('Use ${notename} for the name of the current note, and ${date} for a datetime string.')
 			.addText(text => text
 				.setPlaceholder('')
-				.setValue(this.template ?? "")
+				.setValue(this.filenameFmt ?? "")
 				.onChange(async (value) => {
-					this.template = value;
+					this.filenameFmt = value;
 				})
 			);
 			
-		let footerEl = contentEl.createDiv();
-		let footerButtons = new Setting(footerEl);
+		new Setting(settingDiv)
+			.setName('Template (optional)')
+			.setDesc('Use ${content} to indicate where pasted text should be inserted, before pasting into embedded file.')
+			.addTextArea(textArea => {
+				textArea.inputEl.rows = 5;
+				textArea
+					.setPlaceholder('')
+					.setValue(this.template ?? "")
+					.onChange(async (value) => {
+						this.template = value;
+					});
+			});
+			
+		const footerEl = contentEl.createDiv();
+		const footerButtons = new Setting(footerEl);
 		footerButtons.addButton((b) => {
 			b.setTooltip("Save")
 				.setIcon("checkmark")
