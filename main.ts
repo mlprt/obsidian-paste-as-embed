@@ -75,11 +75,11 @@ export default class PasteAsEmbed extends Plugin {
 			}
 			
 			const embedNoteName = this.getEmbedNoteName(matchingRule, view.file);
-			const embedDirectory = this.getEmbedDirectory(matchingRule, view.file)
-			const embedFilePath = path.join(embedDirectory, embedNoteName + ".md");
+			const embedFolder = this.getEmbedFolder(matchingRule, view.file)
+			const embedFilePath = path.join(embedFolder, embedNoteName + ".md");
 			
-			if (!await this.adapter.exists(embedDirectory)) 
-				await this.adapter.mkdir(embedDirectory);
+			if (!await this.adapter.exists(embedFolder)) 
+				await this.adapter.mkdir(embedFolder);
 			
 			this.app.vault.create(embedFilePath, txt)
 			
@@ -110,19 +110,19 @@ export default class PasteAsEmbed extends Plugin {
 		return name;
 	}
 	
-	getEmbedDirectory(rule: PasteRule, file: TFile) {
-		const directory = path.dirname(file.path);
+	getEmbedFolder(rule: PasteRule, file: TFile) {
+		const folder = path.dirname(file.path);
 		
-		const ruleDirectory = rule.directory.replace('${notename}', file.basename);
+		const ruleFolder = rule.folder.replace('${notename}', file.basename);
 		
-		let embedDirectory;
-		if (rule.directory.startsWith('./')) {
-			embedDirectory = path.join(directory, ruleDirectory);
+		let embedFolder;
+		if (rule.folder.startsWith('./')) {
+			embedFolder = path.join(folder, ruleFolder);
 		} else {
-			embedDirectory = ruleDirectory;
+			embedFolder = ruleFolder;
 		}
 		
-		return embedDirectory;
+		return embedFolder;
 	}
 
 	async onload() {  // Configure resources needed by the plugin.
@@ -169,7 +169,7 @@ export default class PasteAsEmbed extends Plugin {
 export interface PasteRule {
 	name: string;  // Identifies the rule 
 	desc?: string;  // Describes the rule
-	directory: string;  // Where to create the new file 
+	folder: string;  // Where to create the new file 
 	filenameFmt: string;  // How to name the embedded notes. 
 	pattern: string;  // Clipboard text pattern that triggers the rule 
 	template?: string;  // Insert the pasted text into this template, when writing to new file (e.g. code fence)
@@ -220,7 +220,7 @@ class PasteAsEmbedSettingTab extends PluginSettingTab {
 							if (modal.saved) {
 								const rule = {
 									name: modal.name, 
-									directory: modal.directory, 
+									folder: modal.folder, 
 									pattern: modal.pattern, 
 									template: modal.template,
 									desc: modal.desc,
@@ -261,7 +261,7 @@ class PasteAsEmbedSettingTab extends PluginSettingTab {
 									if (modal.saved) {
 										const modalRule = {
 											name: modal.name, 
-											directory: modal.directory, 
+											folder: modal.folder, 
 											pattern: modal.pattern, 
 											template: modal.template,
 											desc: modal.desc,
@@ -350,7 +350,7 @@ class ConfirmDeleteModal extends Modal {
 
 class SettingsModal extends Modal {
 	name: string;  // Identifies the rule 
-	directory: string;  // Where to create the new file 
+	folder: string;  // Where to create the new file 
 	pattern: string;  // Clipboard text pattern that triggers the rule 
 	template?: string;  // Insert the pasted text into this template, when writing to new file (e.g. code fence)
 	desc?: string;
@@ -363,7 +363,7 @@ class SettingsModal extends Modal {
 		
 		if (rule) {
 			this.name = rule.name;
-			this.directory = rule.directory;
+			this.folder = rule.folder;
 			this.pattern = rule.pattern;
 			this.template = rule.template;
 			this.desc = rule.desc;
@@ -415,13 +415,13 @@ class SettingsModal extends Modal {
 			);
 			
 		new Setting(settingDiv)
-			.setName('Embedded note directory')
-			.setDesc('Where to save the embedded notes. Start with "./" for path relative to the directory of the current note. Use ${notename} for the name of the current note.')
+			.setName('Embedded note folder')
+			.setDesc('Where to save the embedded notes. Start with "./" for path relative to the folder of the current note. Use ${notename} for the name of the current note.')
 			.addText(text => text
 				.setPlaceholder('')
-				.setValue(this.directory ?? "")
+				.setValue(this.folder ?? "")
 				.onChange(async (value) => {
-					this.directory = value;
+					this.folder = value;
 				})
 			);
 

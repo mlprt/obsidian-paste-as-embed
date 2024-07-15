@@ -1,6 +1,6 @@
 # Obsidian Paste-As-Embed
 
-When pasting text into a note, check the text against regexp patterns. When it matches, create a new note containing the text, and embed that note into the current note.
+When pasting text into a note, check the text against regexp patterns. When it matches, create a new note containing the text, and embed that note into the active note.
 
 ## How to use
 
@@ -16,9 +16,9 @@ When text is pasted from the clipboard, it is checked against a list of user-def
 When a rule is engaged:
 
 - the pasted text is inserted into a template, if one is supplied for the rule;
-- a new note is created, with its name and directory determined according to the settings defined for the rule;
+- a new note is created, with its name and folder determined according to the settings defined for the rule;
 - the contents of the new note are the (potentially templated) pasted text;
-- the new note is embedded at the current position in the currently open note.
+- the new note is embedded at the current position in the active note.
 
 If no rule is engaged, pasting proceeds as it normally would.
 
@@ -48,7 +48,7 @@ Parts of this plugin are directly derived (see source comments) from parts of th
 - [obsidian-admonition](https://github.com/javalent/admonitions) 
 - [advanced-paste](https://github.com/kxxt/obsidian-advanced-paste) 
 
-Additionally, I took inspiration from [obsidian-custom-attachment-location](https://github.com/RainCat1998/obsidian-custom-attachment-location) concerning the customization of note and directory naming.
+Additionally, I took inspiration from [obsidian-custom-attachment-location](https://github.com/RainCat1998/obsidian-custom-attachment-location) concerning the customization of note and folder naming.
 
 ## TODO
 
@@ -56,3 +56,7 @@ Additionally, I took inspiration from [obsidian-custom-attachment-location](http
 - [ ] Control precedence/order of rules
 - [ ] Allow rules to be either 1) regexp-based, or 2) associated with hotkeys
 - [ ] Toggle CSS styling (e.g. clean-embeds)
+
+### Mobile support
+
+- [ ] Replace Node.js `path` 
