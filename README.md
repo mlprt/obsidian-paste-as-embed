@@ -16,7 +16,10 @@ And here's an example of it in action.
 
 ![](images/plotly-example.gif)
 
-Usually you wouldn't need the JSON to already be in a code block, but I put it there so you could see it before cutting it to the clipboard.
+Note: 
+
+- I'm using [this version](https://forum.obsidian.md/t/meta-post-common-css-hacks/1978/668) of the `clean-embeds` [CSS snippet](https://forum.obsidian.md/t/meta-post-common-css-hacks/1978/394), so the embed is seamless with the rest of the note.
+- Usually you wouldn't need the JSON to already be in a code block, but I put it there so you could see it before cutting it to the clipboard.
 
 ## How it works
 
