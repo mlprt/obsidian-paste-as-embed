@@ -12,6 +12,12 @@ Here are the settings I use for [embedding Plotly figures](#motivation) made in 
 
 ![](images/plotly-example.png)
 
+And here's an example of it in action. 
+
+![](images/plotly-example.gif)
+
+Usually you wouldn't need the JSON to already be in a code block, but I put it there so you could see it before cutting it to the clipboard.
+
 ## How it works
 
 When text is pasted from the clipboard, it is checked against a list of user-defined rules:
