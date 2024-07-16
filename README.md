@@ -10,11 +10,11 @@ Define rules in the plugin settings pane, that determine when and how to create 
 
 Here are the settings I use for [embedding Plotly figures](#motivation) made in Python, using the output from `fig.to_json()`:
 
-![](https://i.imgur.com/uBfxWtR.png)
+![](images/plotly-example.png)
 
 And here's an example of it in action. 
 
-![](https://i.imgur.com/ebyT506.gif)
+![](images/plotly-example.gif)
 
 Usually you wouldn't need the JSON to already be in a code block, but I put it there so you could see it before cutting it to the clipboard.
 
