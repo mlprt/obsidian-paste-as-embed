@@ -1,10 +1,7 @@
 import { 
 	App, 
 	ButtonComponent,
-	// Component,
 	Editor, 
-	// FileManager,
-	FileSystemAdapter,
 	MarkdownView, 
 	moment,
 	Modal, 
@@ -13,14 +10,13 @@ import {
 	PluginSettingTab, 
 	sanitizeHTMLToDom,
 	Setting,
-	// setIcon,
 	TFile,
 } from 'obsidian';
 
 const path = require('path'); // eslint-disable-line 
 
 interface PasteAsEmbedSettings {
-	// TODO: replace with Map https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Map
+	// TODO: replace Record with Map https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Map
 	userRules: Record<string, PasteRule>;
 	datetimeFormat: string; 
 }
@@ -32,7 +28,6 @@ const DEFAULT_SETTINGS: PasteAsEmbedSettings = {
 
 export default class PasteAsEmbed extends Plugin {
 	settings: PasteAsEmbedSettings;
-	adapter: FileSystemAdapter;
 	
 	async pasteFilter(
 		evt: ClipboardEvent | null, 
@@ -78,14 +73,14 @@ export default class PasteAsEmbed extends Plugin {
 			const embedFolder = this.getEmbedFolder(matchingRule, view.file)
 			const embedFilePath = path.join(embedFolder, embedNoteName + ".md");
 			
-			if (!await this.adapter.exists(embedFolder)) 
-				await this.adapter.mkdir(embedFolder);
+			if (!this.app.vault.getFolderByPath(embedFolder)) 
+				await this.app.vault.createFolder(embedFolder);
 			
 			this.app.vault.create(embedFilePath, txt)
 			
 			editor.replaceSelection(`![[${embedNoteName}]]\n`);
 			
-			new Notice('Pasted contents of clipboard into embedded note');
+			new Notice('Pasted contents of clipboard into embedded note.');
 			
 		}
 	}
@@ -129,9 +124,7 @@ export default class PasteAsEmbed extends Plugin {
 		await this.loadSettings();
 		// This adds a settings tab so the user can configure various aspects of the plugin
 		this.addSettingTab(new PasteAsEmbedSettingTab(this.app, this));
-		
-		this.adapter = this.app.vault.adapter as FileSystemAdapter;				
-		
+
 		this.registerEvent(
 			this.app.workspace.on(
 				'editor-paste', 
@@ -350,11 +343,11 @@ class ConfirmDeleteModal extends Modal {
 
 class SettingsModal extends Modal {
 	name: string;  // Identifies the rule 
-	folder: string;  // Where to create the new file 
 	pattern: string;  // Clipboard text pattern that triggers the rule 
 	template?: string;  // Insert the pasted text into this template, when writing to new file (e.g. code fence)
 	desc?: string;
-	filenameFmt: string;
+	folder: string;  // Where to create the new file 
+	filenameFmt: string = "${date}";
 	editing = false;
 	saved = false;  // Whether the user clicked "Save" 
 	
@@ -394,7 +387,8 @@ class SettingsModal extends Modal {
 			);
 				
 		new Setting(settingDiv)
-			.setName('Description (optional)')
+			.setName('Description')
+			.setDesc('Optional text to be displayed with the rule, in the Settings pane.')
 			.addText(text => text
 				.setPlaceholder('')
 				.setValue(this.desc ?? "")
@@ -404,7 +398,7 @@ class SettingsModal extends Modal {
 			);
 				
 		new Setting(settingDiv)
-			.setName('Pattern (optional)')
+			.setName('Pattern')
 			.setDesc('Regex pattern that triggers the rule on pasted clipboard text. Leave empty to trigger on all pasted text.')
 			.addText(text => text
 				.setPlaceholder('')
@@ -415,8 +409,8 @@ class SettingsModal extends Modal {
 			);
 			
 		new Setting(settingDiv)
-			.setName('Embedded note folder')
-			.setDesc('Where to save the embedded notes. Start with "./" for path relative to the folder of the current note. Use ${notename} for the name of the current note.')
+			.setName('Folder')
+			.setDesc('Where to save the embedded notes. Leave empty to save in the active folder. Start with "./" for a path relative to the active folder. Use ${notename} for the name of the active note. ')
 			.addText(text => text
 				.setPlaceholder('')
 				.setValue(this.folder ?? "")
@@ -426,8 +420,8 @@ class SettingsModal extends Modal {
 			);
 
 		new Setting(settingDiv)
-			.setName('Name format for embedded note')
-			.setDesc('Use ${notename} for the name of the current note, and ${date} for a datetime string.')
+			.setName('Embedded note name format')
+			.setDesc('Use ${notename} for the name of the active note, and ${date} for a datetime string.')
 			.addText(text => text
 				.setPlaceholder('')
 				.setValue(this.filenameFmt ?? "")
@@ -437,8 +431,8 @@ class SettingsModal extends Modal {
 			);
 			
 		new Setting(settingDiv)
-			.setName('Template (optional)')
-			.setDesc('Use ${content} to indicate where pasted text should be inserted, before pasting into embedded file.')
+			.setName('Template')
+			.setDesc('Use ${content} to indicate where pasted text should be inserted, before pasting into embedded file. Leave empty to insert as-is.')
 			.addTextArea(textArea => {
 				textArea.inputEl.rows = 5;
 				textArea
@@ -447,7 +441,7 @@ class SettingsModal extends Modal {
 					.onChange(async (value) => {
 						this.template = value;
 					});
-			});
+			}); File
 			
 		const footerEl = contentEl.createDiv();
 		const footerButtons = new Setting(footerEl);
