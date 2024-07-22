@@ -11,9 +11,8 @@ import {
 	sanitizeHTMLToDom,
 	Setting,
 	TFile,
+	normalizePath,
 } from 'obsidian';
-
-const path = require('path'); // eslint-disable-line 
 
 interface PasteAsEmbedSettings {
 	// TODO: replace Record with Map https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Map
@@ -71,11 +70,12 @@ export default class PasteAsEmbed extends Plugin {
 			
 			const embedNoteName = this.getEmbedNoteName(matchingRule, view.file);
 			const embedFolder = this.getEmbedFolder(matchingRule, view.file)
-			const embedFilePath = path.join(embedFolder, embedNoteName + ".md");
 			
-			if (!this.app.vault.getFolderByPath(embedFolder)) 
-				await this.app.vault.createFolder(embedFolder);
+			const cleanEmbedFolder = normalizePath(embedFolder);
+			if (!this.app.vault.getFolderByPath(cleanEmbedFolder)) 
+				await this.app.vault.createFolder(cleanEmbedFolder);
 			
+			const embedFilePath = [cleanEmbedFolder, embedNoteName.concat(".md")].join('/');			
 			this.app.vault.create(embedFilePath, txt)
 			
 			editor.replaceSelection(`![[${embedNoteName}]]\n`);
@@ -106,20 +106,18 @@ export default class PasteAsEmbed extends Plugin {
 	}
 	
 	getEmbedFolder(rule: PasteRule, file: TFile) {
-		const folder = path.dirname(file.path);
-		
 		const ruleFolder = rule.folder.replace('${notename}', file.basename);
 		
 		let embedFolder;
 		if (rule.folder.startsWith('./')) {
-			embedFolder = path.join(folder, ruleFolder);
+			embedFolder = [file.parent?.path, ruleFolder.substring(2)].join('/');
 		} else {
 			embedFolder = ruleFolder;
 		}
-		
+
 		return embedFolder;
 	}
-
+	
 	async onload() {  // Configure resources needed by the plugin.
 		await this.loadSettings();
 		// This adds a settings tab so the user can configure various aspects of the plugin
@@ -201,7 +199,7 @@ class PasteAsEmbedSettingTab extends PluginSettingTab {
 			);
 				
 		new Setting(containerEl)
-			.setName(sanitizeHTMLToDom("Add new rule"))
+			.setName("Add new rule")
 			.addButton((button: ButtonComponent): ButtonComponent => {
 				const b = button
 					.setTooltip("Add rule")
@@ -409,7 +407,7 @@ class SettingsModal extends Modal {
 			);
 			
 		new Setting(settingDiv)
-			.setName('Folder')
+			.setName('Embedded note folder')
 			.setDesc('Where to save the embedded notes. Leave empty to save in the active folder. Start with "./" for a path relative to the active folder. Use ${notename} for the name of the active note. ')
 			.addText(text => text
 				.setPlaceholder('')
